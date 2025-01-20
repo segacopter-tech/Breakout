@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!-- SegaCopters have rizzicopter -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Breakout Game</title>
+    <title>Breakout</title>
     <style>
         body {
             margin: 0;
@@ -13,11 +12,17 @@
             align-items: center;
             height: 100vh;
             background-color: #000;
+            position: relative;
         }
         canvas {
             border: 1px solid #fff;
         }
-        #restartScreen {
+        #passwordScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #gameOverScreen {
             display: none;
             position: absolute;
             top: 50%;
@@ -26,22 +31,32 @@
             color: white;
             text-align: center;
         }
-        #restartButton {
+        #restartButton, #passwordButton {
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
+    <div id="passwordScreen">
+        <input type="password" id="passwordInput" placeholder="Enter password">
+        <button id="passwordButton">Submit</button>
+    </div>
     <canvas id="gameCanvas" width="480" height="320"></canvas>
-    <div id="restartScreen">
+    <div id="gameOverScreen">
         <h1>Game Over</h1>
+        <p>Score: <span id="finalScore">0</span></p>
         <button id="restartButton">Restart</button>
     </div>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+
+        const passwordScreen = document.getElementById("passwordScreen");
+        const passwordInput = document.getElementById("passwordInput");
+        const passwordButton = document.getElementById("passwordButton");
 
         const ballRadius = 10;
         let x = canvas.width / 2;
@@ -65,6 +80,7 @@
         const brickOffsetLeft = 30;
 
         let score = 0;
+        let level = 1;
 
         const bricks = [];
         for (let c = 0; c < brickColumnCount; c++) {
@@ -76,8 +92,19 @@
 
         document.addEventListener("keydown", keyDownHandler, false);
         document.addEventListener("keyup", keyUpHandler, false);
-        
         document.getElementById("restartButton").addEventListener("click", restartGame);
+        passwordButton.addEventListener("click", checkPassword);
+
+        function checkPassword() {
+            const password = passwordInput.value;
+            if (password === "matthewhaslrizz") {
+                passwordScreen.style.display = "none";
+                canvas.style.display = "block";
+                draw();
+            } else {
+                alert("Incorrect password. Try again.");
+            }
+        }
 
         function keyDownHandler(e) {
             if (e.key === "Right" || e.key === "ArrowRight") {
@@ -104,8 +131,8 @@
                             dy = -dy;
                             b.status = 0;
                             score++;
-                            if (score === brickRowCount * brickColumnCount) {
-                                resetBricks();
+                            if (score % (brickRowCount * brickColumnCount) === 0) {
+                                nextLevel();
                             }
                         }
                     }
@@ -151,6 +178,7 @@
             ctx.font = "16px Arial";
             ctx.fillStyle = "#0095DD";
             ctx.fillText("Score: " + score, 8, 20);
+            ctx.fillText("Level: " + level, canvas.width - 65, 20);
         }
 
         function draw() {
@@ -164,57 +192,61 @@
             if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
                 dx = -dx;
             }
-            
+
             if (y + dy < ballRadius) {
                 dy = -dy;
-                
-             } else if (y + dy > canvas.height - ballRadius) { 
-                if (x > paddleX && x < paddleX + paddleWidth) { 
-                    dy=-dy; 
-                } else { 
-                    gameOver(); 
-                    return; 
-                } 
-             } 
+            } else if (y + dy > canvas.height - ballRadius) {
+                if (x > paddleX && x < paddleX + paddleWidth) {
+                    dy = -dy;
+                } else {
+                    gameOver();
+                    return;
+                }
+            }
 
-             if(rightPressed && paddleX<canvas.width-paddleWidth) { 
-                 paddleX +=7; 
-             } else if(leftPressed && paddleX>0) { 
-                 paddleX -=7; 
-             } 
+            if (rightPressed && paddleX < canvas.width - paddleWidth) {
+                paddleX += 7;
+            } else if (leftPressed && paddleX > 0) {
+                paddleX -= 7;
+            }
 
-             x +=dx; 
-             y +=dy; 
-             requestAnimationFrame(draw); 
-         } 
+            x += dx;
+            y += dy;
+            requestAnimationFrame(draw);
+        }
 
-         function gameOver() { 
-             document.getElementById("restartScreen").style.display="block"; 
-         } 
+        function nextLevel() {
+            resetBricks();
+            dx *= 1.1;
+            dy *= 1.1;
+            level++;
+        }
 
-         function restartGame() { 
-             document.getElementById("restartScreen").style.display="none"; 
-             x=canvas.width/2; 
-             y=canvas.height-30; 
-             dx=2; 
-             dy=-2; 
-             score=0; 
-             resetBricks(); 
-             draw(); 
-         } 
+        function resetBricks() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r].status = 1;
+                }
+            }
+        }
 
-         function resetBricks() { 
-             for(let c=0;c<brickColumnCount;c++) { 
-                 for(let r=0;r<brickRowCount;r++) { 
-                     bricks[c][r].status=1; 
-                 } 
-             } 
-         } 
+        function gameOver() {
+            document.getElementById("finalScore").textContent = score;
+            document.getElementById("gameOverScreen").style.display = "block";
+        }
 
-         draw(); 
-
-     </script> 
-
- </body> 
-
- </html> 
+        function restartGame() {
+            document.getElementById("gameOverScreen").style.display = "none";
+            x = canvas.width / 2;
+            y = canvas.height - 30;
+            dx = 2;
+            dy = -2;
+            paddleX = (canvas.width - paddleWidth) / 2;
+            score = 0;
+            level = 1;
+            resetBricks();
+            draw();
+        }
+    </script>
+</body>
+</html>
